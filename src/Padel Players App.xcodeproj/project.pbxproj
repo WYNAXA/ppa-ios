@@ -382,7 +382,7 @@
 				);
 				MARKETING_VERSION = 1;
 				CURRENT_PROJECT_VERSION = 1;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.padelplayersapp.app";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.wynaxa.padelplayers";
 				PRODUCT_NAME = "PadelPlayersApp";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTS_MACCATALYST = YES;
@@ -410,7 +410,7 @@
 				);
 				MARKETING_VERSION = 1;
 				CURRENT_PROJECT_VERSION = 1;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.padelplayersapp.app";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.wynaxa.padelplayers";
 				PRODUCT_NAME = "PadelPlayersApp";
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Osize";
