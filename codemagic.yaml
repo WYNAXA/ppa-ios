@@ -1,32 +1,39 @@
 workflows:
   ios-build:
-    name: iOS Build
+    name: iOS Build & Submit
     instance_type: mac_mini_m2
     max_build_duration: 60
+    integrations:
+      app_store_connect: codemagic
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.wynaxa.padelplayers
       xcode: latest
       cocoapods: default
-      vars:
-        BUNDLE_ID: "com.padelplayersapp.app"
-        XCODE_PROJECT: "src/Padel Players App.xcodeproj"
-        XCODE_SCHEME: "Padel Players App"
     scripts:
-      - name: Install CocoaPods dependencies
+      - name: Install CocoaPods
         script: |
           cd src
           pod install
-      - name: Build unsigned IPA
+      - name: Set up signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files com.wynaxa.padelplayers \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
         script: |
           cd src
-          xcodebuild \
-            -workspace "Padel Players App.xcworkspace" \
-            -scheme "Padel Players App" \
-            -configuration Release \
-            -sdk iphoneos \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            -derivedDataPath build
+          xcode-project build-ipa \
+            --workspace "Padel Players App.xcworkspace" \
+            --scheme "Padel Players App"
     artifacts:
-      - src/build/**/*.app
-      - src/build/**/*.ipa
+      - src/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
