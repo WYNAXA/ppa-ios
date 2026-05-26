@@ -7,8 +7,6 @@ workflows:
       app_store_connect: Codemagic
     environment:
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.wynaxa.padelplayers
         provisioning_profiles:
           - padelplayers_dist_profile
         certificates:
