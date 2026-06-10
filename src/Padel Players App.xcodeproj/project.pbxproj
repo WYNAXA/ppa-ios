@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D4E5F6A7BA00ONESIG /* OneSignalFramework in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F6A7B900ONESIG /* OneSignalFramework */; };
 		25D3517F267A48E0002E5DC0 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 25D3517E267A48E0002E5DC0 /* GoogleService-Info.plist */; };
 		595F23A525CEFBFE0053416C /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595F239A25CEFBFD0053416C /* Settings.swift */; };
 		595F23A625CEFBFE0053416C /* Entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 595F239B25CEFBFD0053416C /* Entitlements */; };
@@ -47,6 +48,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D4E5F6A7BA00ONESIG /* OneSignalFramework in Frameworks */,
 				E1E260C850014D6B34B487B0 /* Pods_PadelPlayersApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -113,6 +115,9 @@
 			name = "Padel Players App";
 			productName = "Padel Players App";
 			productReference = 59333BAA25CFF706003392A4 /* PadelPlayersApp.app */;
+			packageProductDependencies = (
+				A1B2C3D4E5F6A7B900ONESIG /* OneSignalFramework */,
+			);
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -143,6 +148,9 @@
 			productRefGroup = CD89F880237E9D9200C436A1;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				A1B2C3D4E5F6A7B800ONESIG /* XCRemoteSwiftPackageReference "OneSignal-iOS-SDK" */,
+			);
 			targets = (
 				CD89F888237E9D9200C436A1 /* Padel Players App */,
 			);
@@ -441,6 +449,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1B2C3D4E5F6A7B800ONESIG /* XCRemoteSwiftPackageReference "OneSignal-iOS-SDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/OneSignal/OneSignal-iOS-SDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1B2C3D4E5F6A7B900ONESIG /* OneSignalFramework */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F6A7B800ONESIG /* XCRemoteSwiftPackageReference "OneSignal-iOS-SDK" */;
+			productName = OneSignalFramework;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CD89F881237E9D9200C436A1 /* Project object */;
 }

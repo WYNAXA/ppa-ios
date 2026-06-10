@@ -272,5 +272,30 @@ extension ViewController: WKScriptMessageHandler {
         if message.name == "push-token" {
             handleFCMToken()
         }
+        if message.name == "onesignal" {
+            handleOneSignalBridge(message: message)
+        }
   }
+}
+
+// MARK: - OneSignal Web→Native Bridge
+
+import OneSignalFramework
+
+private func handleOneSignalBridge(message: WKScriptMessage) {
+    guard let body = message.body as? [String: Any],
+          let type = body["type"] as? String else { return }
+
+    switch type {
+    case "login":
+        if let userId = body["userId"] as? String {
+            OneSignal.login(userId)
+            print("[OneSignal Bridge] login: \(userId)")
+        }
+    case "logout":
+        OneSignal.logout()
+        print("[OneSignal Bridge] logout")
+    default:
+        print("[OneSignal Bridge] unknown type: \(type)")
+    }
 }
