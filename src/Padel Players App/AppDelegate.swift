@@ -1,8 +1,6 @@
 import UIKit
 import OneSignalFramework
 
-let gcmMessageIDKey = "gcm.message_id"
-
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -32,9 +30,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let userInfo = notification.request.content.userInfo
-        if let messageID = userInfo[gcmMessageIDKey] {
-            print("Message ID: \(messageID)")
-        }
         print("push userInfo (foreground):", userInfo)
         sendPushToWebView(userInfo: userInfo)
         completionHandler([[.banner, .list, .sound]])
@@ -44,9 +39,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        if let messageID = userInfo[gcmMessageIDKey] {
-            print("Message ID: \(messageID)")
-        }
         print("push userInfo (tapped):", userInfo)
         sendPushClickToWebView(userInfo: userInfo)
         completionHandler()
