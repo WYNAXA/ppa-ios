@@ -189,7 +189,8 @@ func sendPushClickToWebView(userInfo: [AnyHashable: Any]){
 }
 
 /// Dispatch the event if the WebView is ready NOW (warm/backgrounded case).
-/// On success clears the pending payload so it won't replay on webview-ready.
+/// Does NOT clear pendingPushClickPayload — the web side posts "push-click-handled"
+/// to confirm receipt, which is the only thing that clears the buffer.
 /// Does NOT retry — cold-start replay is handled by the webview-ready handshake.
 func checkViewAndEvaluateOnce(event: String, detail: String) {
     if (!PadelPlayersApp.webView.isHidden && !PadelPlayersApp.webView.isLoading) {
@@ -197,8 +198,6 @@ func checkViewAndEvaluateOnce(event: String, detail: String) {
             PadelPlayersApp.webView.evaluateJavaScript(
                 "this.dispatchEvent(new CustomEvent('\(event)', { detail: \(detail) }))"
             )
-            // Warm dispatch succeeded — clear pending so webview-ready won't replay.
-            pendingPushClickPayload = nil
         })
     }
     // If WebView isn't ready, do nothing — webview-ready will replay the pending payload.
@@ -208,7 +207,6 @@ func checkViewAndEvaluateOnce(event: String, detail: String) {
 /// Replays the pending cold-start push click, if any.
 func replayPendingPushClick() {
     guard let userInfo = pendingPushClickPayload else { return }
-    pendingPushClickPayload = nil
 
     var json = ""
     do {
@@ -223,4 +221,11 @@ func replayPendingPushClick() {
             "this.dispatchEvent(new CustomEvent('push-notification-click', { detail: \(json) }))"
         )
     })
+}
+
+/// Called when the web app posts { type: "push-click-handled" } to confirm
+/// the push-notification-click event was received and navigated. Only then
+/// do we clear the buffer.
+func clearPendingPushClick() {
+    pendingPushClickPayload = nil
 }

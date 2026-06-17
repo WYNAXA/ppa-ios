@@ -301,6 +301,9 @@ private func handleOneSignalBridge(message: WKScriptMessage) {
     case "webview-ready":
         print("[OneSignal Bridge] webview-ready — replaying pending push click if any")
         replayPendingPushClick()
+    case "push-click-handled":
+        print("[OneSignal Bridge] push-click-handled — clearing pending payload")
+        clearPendingPushClick()
     default:
         print("[OneSignal Bridge] unknown type: \(type)")
     }
