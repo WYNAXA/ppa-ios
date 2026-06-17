@@ -108,6 +108,8 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	</array>
-	
+	<key>OneSignal_suppress_launch_urls</key>
+	<true/>
+
 </dict>
 </plist>
