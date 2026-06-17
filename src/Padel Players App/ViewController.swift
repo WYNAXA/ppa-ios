@@ -3,6 +3,9 @@ import WebKit
 
 var webView: WKWebView! = nil
 
+// Cold-start push: holds the notification payload until the WebView JS signals ready.
+var pendingPushClickPayload: [AnyHashable: Any]? = nil
+
 class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteractionControllerDelegate {
     enum LoadingMode {
         case defaultCachePolicy
@@ -295,6 +298,9 @@ private func handleOneSignalBridge(message: WKScriptMessage) {
     case "logout":
         OneSignal.logout()
         print("[OneSignal Bridge] logout")
+    case "webview-ready":
+        print("[OneSignal Bridge] webview-ready — replaying pending push click if any")
+        replayPendingPushClick()
     default:
         print("[OneSignal Bridge] unknown type: \(type)")
     }

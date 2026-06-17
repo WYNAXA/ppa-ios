@@ -173,6 +173,10 @@ func sendPushToWebView(userInfo: [AnyHashable: Any]){
 }
 
 func sendPushClickToWebView(userInfo: [AnyHashable: Any]){
+    // Always buffer the payload for cold-start replay (webview-ready handshake).
+    // Warm-path dispatch below will clear it on success.
+    pendingPushClickPayload = userInfo
+
     var json = "";
     do {
         let jsonData = try JSONSerialization.data(withJSONObject: userInfo)
@@ -181,5 +185,42 @@ func sendPushClickToWebView(userInfo: [AnyHashable: Any]){
         print("ERROR: userInfo parsing problem")
         return
     }
-    checkViewAndEvaluate(event: "push-notification-click", detail: json)
+    checkViewAndEvaluateOnce(event: "push-notification-click", detail: json)
+}
+
+/// Dispatch the event if the WebView is ready NOW (warm/backgrounded case).
+/// On success clears the pending payload so it won't replay on webview-ready.
+/// Does NOT retry — cold-start replay is handled by the webview-ready handshake.
+func checkViewAndEvaluateOnce(event: String, detail: String) {
+    if (!PadelPlayersApp.webView.isHidden && !PadelPlayersApp.webView.isLoading) {
+        DispatchQueue.main.async(execute: {
+            PadelPlayersApp.webView.evaluateJavaScript(
+                "this.dispatchEvent(new CustomEvent('\(event)', { detail: \(detail) }))"
+            )
+            // Warm dispatch succeeded — clear pending so webview-ready won't replay.
+            pendingPushClickPayload = nil
+        })
+    }
+    // If WebView isn't ready, do nothing — webview-ready will replay the pending payload.
+}
+
+/// Called when the web app posts { type: "webview-ready" } via the onesignal bridge.
+/// Replays the pending cold-start push click, if any.
+func replayPendingPushClick() {
+    guard let userInfo = pendingPushClickPayload else { return }
+    pendingPushClickPayload = nil
+
+    var json = ""
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: userInfo)
+        json = String(data: jsonData, encoding: .utf8)!
+    } catch {
+        print("ERROR: pending push replay parsing problem")
+        return
+    }
+    DispatchQueue.main.async(execute: {
+        PadelPlayersApp.webView.evaluateJavaScript(
+            "this.dispatchEvent(new CustomEvent('push-notification-click', { detail: \(json) }))"
+        )
+    })
 }
