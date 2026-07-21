@@ -11,7 +11,7 @@ workflows:
           - padelplayers_dist_profile
         certificates:
           - Padel Players App
-      xcode: latest
+      xcode: 16.4
       cocoapods: default
     scripts:
       - name: Install CocoaPods
