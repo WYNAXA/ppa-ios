@@ -104,91 +104,169 @@ func calcWebviewFrame(webviewView: UIView, toolbarView: UIToolbar?) -> CGRect{
 }
 
 extension ViewController: WKUIDelegate, WKDownloadDelegate {
-    // redirect new tabs to main webview
+    // redirect new tabs to main webview — but only for same-origin URLs.
+    // External URLs open in SFSafariViewController instead of polluting the main webview.
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if (navigationAction.targetFrame == nil) {
-            webView.load(navigationAction.request)
-        }
-        return nil
-    }
-    // restrict navigation to target host, open external links in 3rd party apps
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if (navigationAction.request.url?.scheme == "about") {
-            return decisionHandler(.allow)
-        }
-        if (navigationAction.shouldPerformDownload || navigationAction.request.url?.scheme == "blob") {
-            return decisionHandler(.download)
-        }
-
-        if let requestUrl = navigationAction.request.url{
-            if let requestHost = requestUrl.host {
-                // NOTE: Match auth origin first, because host origin may be a subset of auth origin and may therefore always match
-                let matchingAuthOrigin = authOrigins.first(where: { requestHost.range(of: $0) != nil })
-                if (matchingAuthOrigin != nil) {
-                    decisionHandler(.allow)
-                    if (toolbarView.isHidden) {
-                        toolbarView.isHidden = false
-                        webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: toolbarView)
-                    }
-                    return
+        if navigationAction.targetFrame == nil {
+            if let url = navigationAction.request.url, let host = url.host {
+                let isSameOrigin = allowedOrigins.contains(where: { host.range(of: $0) != nil })
+                    || authOrigins.contains(where: { host.range(of: $0) != nil })
+                if isSameOrigin {
+                    webView.load(navigationAction.request)
+                } else if ["http", "https"].contains(url.scheme?.lowercased()) {
+                    let safari = SFSafariViewController(url: url)
+                    self.present(safari, animated: true, completion: nil)
+                } else if UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url)
                 }
-
-                let matchingHostOrigin = allowedOrigins.first(where: { requestHost.range(of: $0) != nil })
-                if (matchingHostOrigin != nil) {
-                    // Open in main webview
-                    decisionHandler(.allow)
-                    if (!toolbarView.isHidden) {
-                        toolbarView.isHidden = true
-                        webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: nil)
-                    }
-                    return
-                }
-                if (navigationAction.navigationType == .other &&
-                    navigationAction.value(forKey: "syntheticClickType") as! Int == 0 &&
-                    (navigationAction.targetFrame != nil) &&
-                    // no error here, fake warning
-                    (navigationAction.sourceFrame != nil)
-                ) {
-                    decisionHandler(.allow)
-                    return
-                }
-                else {
-                    decisionHandler(.cancel)
-                }
-
-
-                if ["http", "https"].contains(requestUrl.scheme?.lowercased() ?? "") {
-                    // Can open with SFSafariViewController
-                    let safariViewController = SFSafariViewController(url: requestUrl)
-                    self.present(safariViewController, animated: true, completion: nil)
-                } else {
-                    // Scheme is not supported or no scheme is given, use openURL
-                    if (UIApplication.shared.canOpenURL(requestUrl)) {
-                        UIApplication.shared.open(requestUrl)
-                    }
-                }
-            } else {
-                decisionHandler(.cancel)
-                if (navigationAction.request.url?.scheme == "tel" || navigationAction.request.url?.scheme == "mailto" ){
-                    if (UIApplication.shared.canOpenURL(requestUrl)) {
-                        UIApplication.shared.open(requestUrl)
-                    }
-                }
-                else {
-                    if requestUrl.isFileURL {
-                        // not tested
-                        downloadAndOpenFile(url: requestUrl.absoluteURL)
-                    }
-                    // if (requestUrl.absoluteString.contains("base64")){
-                    //     downloadAndOpenBase64File(base64String: requestUrl.absoluteString)
-                    // }
+            } else if let url = navigationAction.request.url {
+                // No host (data:, blob:, tel:, mailto:) — hand to the OS
+                if UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url)
                 }
             }
         }
-        else {
-            decisionHandler(.cancel)
+        return nil
+    }
+
+    // restrict navigation to target host, open external links in 3rd party apps
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // about: (blank frames, etc.) — allow
+        if navigationAction.request.url?.scheme == "about" {
+            return decisionHandler(.allow)
         }
 
+        // Blob downloads — hand to the download delegate
+        if navigationAction.shouldPerformDownload || navigationAction.request.url?.scheme == "blob" {
+            return decisionHandler(.download)
+        }
+
+        guard let requestUrl = navigationAction.request.url else {
+            return decisionHandler(.cancel)
+        }
+
+        let scheme = requestUrl.scheme?.lowercased() ?? ""
+
+        // ── Scheme-first handling (before host check) ─────────────────────────
+        // data: URIs have no host. Calendar data URIs must be written to a temp
+        // file so iOS can hand them to the Calendar app.
+        if scheme == "data" {
+            decisionHandler(.cancel)
+            handleDataUri(requestUrl)
+            return
+        }
+
+        // tel: / mailto: — hand to the OS
+        if scheme == "tel" || scheme == "mailto" {
+            decisionHandler(.cancel)
+            if UIApplication.shared.canOpenURL(requestUrl) {
+                UIApplication.shared.open(requestUrl)
+            }
+            return
+        }
+
+        // File URLs
+        if requestUrl.isFileURL {
+            decisionHandler(.cancel)
+            downloadAndOpenFile(url: requestUrl.absoluteURL)
+            return
+        }
+
+        // ── Host-based routing (http/https) ───────────────────────────────────
+        guard let requestHost = requestUrl.host else {
+            return decisionHandler(.cancel)
+        }
+
+        // Auth origins (e.g. OAuth providers) — load in-app with toolbar
+        let matchingAuthOrigin = authOrigins.first(where: { requestHost.range(of: $0) != nil })
+        if matchingAuthOrigin != nil {
+            decisionHandler(.allow)
+            if toolbarView.isHidden {
+                toolbarView.isHidden = false
+                webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: toolbarView)
+            }
+            return
+        }
+
+        // Allowed (same) origins — load in main webview, hide toolbar
+        let matchingHostOrigin = allowedOrigins.first(where: { requestHost.range(of: $0) != nil })
+        if matchingHostOrigin != nil {
+            decisionHandler(.allow)
+            if !toolbarView.isHidden {
+                toolbarView.isHidden = true
+                webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: nil)
+            }
+            return
+        }
+
+        // Sub-resource loads (iframes, XHR redirects) — allow if they look like
+        // in-page navigations rather than user clicks.  Safe optional read of
+        // the private syntheticClickType key (BUG 3 fix: was force-unwrapped).
+        if navigationAction.navigationType == .other {
+            let syntheticClickType = navigationAction.value(forKey: "syntheticClickType") as? Int ?? -1
+            if syntheticClickType == 0
+                && navigationAction.targetFrame != nil
+                && navigationAction.sourceFrame != nil {
+                return decisionHandler(.allow)
+            }
+        }
+
+        // External URL — cancel in-app navigation, open in SFSafariViewController
+        decisionHandler(.cancel)
+        if ["http", "https"].contains(scheme) {
+            let safariViewController = SFSafariViewController(url: requestUrl)
+            self.present(safariViewController, animated: true, completion: nil)
+        } else if UIApplication.shared.canOpenURL(requestUrl) {
+            UIApplication.shared.open(requestUrl)
+        }
+    }
+
+    /// Handle a data: URI by writing its payload to a temp file and presenting
+    /// it via UIDocumentInteractionController (triggers iOS "Add to Calendar"
+    /// for text/calendar content).
+    private func handleDataUri(_ url: URL) {
+        let str = url.absoluteString
+        // Parse: data:[<mediatype>][;base64],<data>
+        guard let commaIndex = str.firstIndex(of: ",") else { return }
+        let header = String(str[str.index(str.startIndex, offsetBy: 5)..<commaIndex]) // skip "data:"
+        let payload = String(str[str.index(after: commaIndex)...])
+
+        let isBase64 = header.hasSuffix(";base64")
+        let mimeType = header.replacingOccurrences(of: ";base64", with: "")
+            .components(separatedBy: ";").first ?? "application/octet-stream"
+
+        // Determine file extension from MIME
+        let ext: String
+        switch mimeType {
+        case "text/calendar": ext = "ics"
+        case "text/csv":      ext = "csv"
+        case "application/pdf": ext = "pdf"
+        default: ext = "bin"
+        }
+
+        // Decode payload
+        let data: Data?
+        if isBase64 {
+            data = Data(base64Encoded: payload)
+        } else if let decoded = payload.removingPercentEncoding {
+            data = decoded.data(using: .utf8)
+        } else {
+            data = payload.data(using: .utf8)
+        }
+        guard let fileData = data else { return }
+
+        // Write to temp file and present
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileUrl = tempDir.appendingPathComponent("ppa-download.\(ext)")
+        try? FileManager.default.removeItem(at: fileUrl)
+        do {
+            try fileData.write(to: fileUrl)
+            DispatchQueue.main.async {
+                self.openFile(url: fileUrl)
+            }
+        } catch {
+            print("handleDataUri: failed to write temp file: \(error)")
+        }
     }
     // Handle javascript: `window.alert(message: String)`
     func webView(_ webView: WKWebView,
