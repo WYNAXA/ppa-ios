@@ -23,6 +23,10 @@ workflows:
           keychain initialize
           keychain add-certificates
           xcode-project use-profiles
+      - name: Set build number
+        script: |
+          cd src
+          agvtool new-version -all 5
       - name: Build IPA
         script: |
           cd src
