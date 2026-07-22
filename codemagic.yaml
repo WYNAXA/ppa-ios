@@ -3,9 +3,9 @@ workflows:
     name: iOS Build & Submit
     instance_type: mac_mini_m2
     max_build_duration: 60
-    integrations:
-      app_store_connect: Codemagic
     environment:
+      groups:
+        - appstore_credentials
       ios_signing:
         provisioning_profiles:
           - padelplayers_dist_profile
@@ -13,8 +13,6 @@ workflows:
           - Padel Players App
       xcode: latest
       cocoapods: default
-      vars:
-        APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS: "--apple-id 6762192246"
     scripts:
       - name: Install CocoaPods
         script: |
@@ -31,10 +29,12 @@ workflows:
           xcode-project build-ipa \
             --workspace "Padel Players App.xcworkspace" \
             --scheme "Padel Players App"
+      - name: Upload to App Store Connect
+        script: |
+          app-store-connect publish \
+            --path 'src/build/ios/ipa/*.ipa' \
+            --apple-id "$APPLE_ID_EMAIL" \
+            --password "$APP_SPECIFIC_PASSWORD"
     artifacts:
       - src/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
