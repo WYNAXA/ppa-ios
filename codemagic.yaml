@@ -11,7 +11,7 @@ workflows:
           - padelplayers_dist_profile
         certificates:
           - Padel Players App
-      xcode: 16.4
+      xcode: latest
       cocoapods: default
     scripts:
       - name: Install CocoaPods
@@ -36,3 +36,4 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+        altool_additional_arguments: "--apple-id 6762192246"
