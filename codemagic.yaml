@@ -13,6 +13,8 @@ workflows:
           - Padel Players App
       xcode: latest
       cocoapods: default
+      vars:
+        APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS: "--apple-id 6762192246"
     scripts:
       - name: Install CocoaPods
         script: |
@@ -36,4 +38,3 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        altool_additional_arguments: "--apple-id 6762192246"
