@@ -26,7 +26,7 @@ workflows:
       - name: Set build number
         script: |
           cd src
-          agvtool new-version -all 5
+          agvtool new-version -all $(($PROJECT_BUILD_NUMBER + 100))
       - name: Build IPA
         script: |
           cd src
